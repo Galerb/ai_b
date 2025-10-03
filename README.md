@@ -31,3 +31,16 @@ len_print_epoch = 10
 -fit - Обучение нейросети (с вызовом backpropagation)(перемешивет и нормализует)
 -predict - Предсказание выходов для новых входов(forward c нормализацией входов и денормализацией выходов)
 -score - Подсчёт точности (MAE или MSE)
+
+# загрузить удалённо
+import urllib.request
+import types
+
+url = "https://raw.githubusercontent.com/Galerb/ai_b/main/NeuralNetwork.py"
+src = urllib.request.urlopen(url).read().decode('utf-8')
+
+module = types.ModuleType("remote_nn")
+exec(compile(src, url, 'exec'), module.__dict__)
+
+NeuralNetwork = module.NeuralNetwork
+nn = NeuralNetwork()
