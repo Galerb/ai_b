@@ -2,12 +2,14 @@ import random
 import math
 
 class NeuralNetwork:
-    def __init__(self):
+    def __init__(self, laws = None):
+        self.type_of_activation = "tanh"
+        self.letters = self.get_common_symbols()
         self.LEARNING_RATE = 0.028
         self.val_epochs = 1000
         self.MIN_VAL = 0
         self.MAX_VAL = 100
-        self.laws = [2, 5, 5, 2]
+        self.laws = laws
         self.len_print_epoch = 10
         self.list_laws = [
             [0 for _ in range(self.laws[i])]
@@ -21,18 +23,18 @@ class NeuralNetwork:
             for i in range(len(self.laws) - 1)
         ]
 
-    def activation(self, x,  IsDerivative=False, type = "tanh"):
-        if type == "tanh":
+    def activation(self, x,  IsDerivative=False):
+        if self.type_of_activation == "tanh":
             if IsDerivative:
-                return 1 - x * x
+                return 1 - x ** 2 
             else:
                 return math.tanh(x)
-        elif type == "sigmoid":
+        elif self.type_of_activation == "sig":
             if IsDerivative:
                 return x * (1 - x)
             else:
                 return 1 / (1 + math.exp(-x))
-        elif type == "ReLU":
+        elif self.type_of_activation == "ReLU":
             if IsDerivative:
                 return 1 if x > 0 else 0
             else:
@@ -45,7 +47,12 @@ class NeuralNetwork:
                 response_list.append(self.normalise(input[i]))
             return response_list
         else:
-            return (input - self.MIN_VAL) / (self.MAX_VAL - self.MIN_VAL) * 2 - 1
+            if self.type_of_activation == "sig":
+                return (input - self.MIN_VAL) / (self.MAX_VAL - self.MIN_VAL)
+            elif self.type_of_activation == 'tanh':
+                return (input - self.MIN_VAL) / (self.MAX_VAL - self.MIN_VAL) * 2 - 1
+            elif self.type_of_activation == 'ReLU':
+                return (input - self.MIN_VAL) / (self.MAX_VAL - self.MIN_VAL)
         
     def denormalise(self, input):
         if type(input) == list:
@@ -54,7 +61,12 @@ class NeuralNetwork:
                 response_list.append(self.denormalise(input[i]))
             return response_list
         else:
-            return ((input + 1) / 2) * (self.MAX_VAL - self.MIN_VAL) + self.MIN_VAL
+            if self.type_of_activation == "sig":
+                return (input) * (self.MAX_VAL - self.MIN_VAL) + self.MIN_VAL
+            elif self.type_of_activation == 'tanh':
+                return  ((input + 1) / 2) * (self.MAX_VAL - self.MIN_VAL) + self.MIN_VAL
+            elif self.type_of_activation == 'ReLU':
+                return (input) * (self.MAX_VAL - self.MIN_VAL) + self.MIN_VAL
 
     def forward(self, inp):
         current_input = inp[:]
@@ -86,7 +98,7 @@ class NeuralNetwork:
         last_hidden = self.list_laws[-1] if self.list_laws else inp
         deltas[-1] = []
         for i in range(len(output)):
-            d = errors[i] * (1 - output[i] ** 2)
+            d = errors[i] * self.activation(output[i], IsDerivative=True)
             deltas[-1].append(d)
 
         # === ДЕЛЬТЫ СКРЫТЫХ СЛОЁВ (в обратном порядке) ===
@@ -123,7 +135,6 @@ class NeuralNetwork:
         random.shuffle(combined)
         X_shuffled, y_shuffled = zip(*combined)
         return list(X_shuffled), list(y_shuffled)
-
 
     def fit(self, X, y):
         for epoch in range(self.val_epochs):  
