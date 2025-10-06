@@ -1,14 +1,14 @@
 import random
 import math
+import numpy as np
 
 class NeuralNetwork:
     def __init__(self, laws = None):
         self.type_of_activation = "tanh"
-        self.letters = self.get_common_symbols()
         self.LEARNING_RATE = 0.028
         self.val_epochs = 1000
         self.MIN_VAL = 0
-        self.MAX_VAL = 100
+        self.MAX_VAL = 169
         self.laws = laws
         self.len_print_epoch = 10
         self.list_laws = [
@@ -17,7 +17,7 @@ class NeuralNetwork:
         ]
         self.list_weights = [
             [
-                [random.uniform(-1, 1) for _ in range(self.laws[i] + 1)]
+                [random.uniform(0.01, 1) for _ in range(self.laws[i] + 1)]
                 for _ in range(self.laws[i + 1])
             ]
             for i in range(len(self.laws) - 1)
@@ -165,12 +165,42 @@ class NeuralNetwork:
                 respond_list.append(abs(pred - real))
         return sum(respond_list) / len(respond_list)
     
+
+
+class NeuralNetworkText:
+    def __init__(self):
+        self.letters = self.get_common_symbols()
+        self.MAX_len_of_text = 5
+
     def get_common_symbols(self):
         russian_upper = ''.join([chr(c) for c in range(ord('А'), ord('Я') + 1)]) + 'Ё'
         russian_lower = ''.join([chr(c) for c in range(ord('а'), ord('я') + 1)]) + 'ё'
         english_upper = ''.join([chr(c) for c in range(ord('A'), ord('Z') + 1)])
         english_lower = ''.join([chr(c) for c in range(ord('a'), ord('z') + 1)])
         digits = '0123456789'
-        punctuation = r""".,;:!?—–-()[]{}"'«»“”‘’…@#$%^&*_+=/<>|\~`"""
+        punctuation = r""" .,;:!?—–-()[]{}"'«»“”‘’…@#$%^&*_+=/<>|\~`"""
 
-        return list(russian_upper + russian_lower + english_upper + english_lower + digits + punctuation)
+        return list(punctuation + russian_upper + russian_lower + english_upper + english_lower + digits)
+
+    def fill_to_length(self, inp):
+        while len(inp) < self.MAX_len_of_text:
+            inp.append(0)
+        return inp
+
+    def str_to_vector(self, inp):
+        response = []
+        for i in range(len(inp)):
+            response.append(self.letters.index(inp[i]))
+        return self.fill_to_length(response)
+
+    def vector_to_str(self, inp):
+        response = []
+        for i in range(len(inp)):
+            response.append(self.letters[round(inp[i])])
+        return response
+
+
+#ent = list(map(float, input().split()))
+'''ent = input()
+nnt = NeuralNetworkText()
+print(*nnt.vector_to_str(nnt.str_to_vector(ent)))'''

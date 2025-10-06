@@ -43,4 +43,4 @@ module = types.ModuleType("remote_nn")
 exec(compile(src, url, 'exec'), module.__dict__)
 
 NeuralNetwork = module.NeuralNetwork
-nn = NeuralNetwork()
+nn = NeuralNetwork([2, 3, 4, 1])
