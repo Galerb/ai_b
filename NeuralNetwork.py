@@ -38,7 +38,7 @@ class NeuralNetwork:
             if IsDerivative:
                 return 1 if x > 0 else 0
             else:
-                return max(0.0001, x)
+                return max(0, x)
 
     def normalise(self, input):
         if type(input) == list:
@@ -46,6 +46,7 @@ class NeuralNetwork:
             for i in range(len(input)):
                 response_list.append(self.normalise(input[i]))
             return response_list
+            
         else:
             if self.type_of_activation == "sig":
                 return (input - self.MIN_VAL) / (self.MAX_VAL - self.MIN_VAL)
