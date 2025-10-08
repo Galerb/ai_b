@@ -38,7 +38,7 @@ class NeuralNetwork:
             if IsDerivative:
                 return 1 if x > 0 else 0
             else:
-                return max(0, x)
+                return max(0.0001, x)
 
     def normalise(self, input):
         if type(input) == list:
