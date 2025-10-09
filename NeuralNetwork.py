@@ -3,8 +3,8 @@ import math
 import numpy as np
 
 class NeuralNetwork:
-    def __init__(self, laws = None):
-        self.type_of_activation = "tanh"
+    def __init__(self, laws = []):
+        self.type_of_activation = "ReLU"
         self.LEARNING_RATE = 0.028
         self.val_epochs = 1000
         self.MIN_VAL = 0
@@ -17,11 +17,13 @@ class NeuralNetwork:
         ]
         self.list_weights = [
             [
-                [random.uniform(0.01, 1) for _ in range(self.laws[i] + 1)]
+                [random.uniform(0.0001, 1) for _ in range(self.laws[i] + 1)]
                 for _ in range(self.laws[i + 1])
             ]
             for i in range(len(self.laws) - 1)
         ]
+        if len(self.laws) < 2:
+            raise ValueError("Laws must be a list with at least two elements.")
 
     def activation(self, x,  IsDerivative=False):
         if self.type_of_activation == "tanh":
@@ -36,9 +38,11 @@ class NeuralNetwork:
                 return 1 / (1 + math.exp(-x))
         elif self.type_of_activation == "ReLU":
             if IsDerivative:
-                return 1 if x > 0 else 0
+                return x if x > 0 else 0 * x
             else:
                 return max(0, x)
+        else:
+            raise ValueError("Unsupported activation function type.")
 
     def normalise(self, input):
         if type(input) == list:
@@ -46,7 +50,6 @@ class NeuralNetwork:
             for i in range(len(input)):
                 response_list.append(self.normalise(input[i]))
             return response_list
-            
         else:
             if self.type_of_activation == "sig":
                 return (input - self.MIN_VAL) / (self.MAX_VAL - self.MIN_VAL)
@@ -54,6 +57,8 @@ class NeuralNetwork:
                 return (input - self.MIN_VAL) / (self.MAX_VAL - self.MIN_VAL) * 2 - 1
             elif self.type_of_activation == 'ReLU':
                 return (input - self.MIN_VAL) / (self.MAX_VAL - self.MIN_VAL)
+            else:
+                raise ValueError("Unsupported activation function type.")
         
     def denormalise(self, input):
         if type(input) == list:
@@ -68,33 +73,30 @@ class NeuralNetwork:
                 return  ((input + 1) / 2) * (self.MAX_VAL - self.MIN_VAL) + self.MIN_VAL
             elif self.type_of_activation == 'ReLU':
                 return (input) * (self.MAX_VAL - self.MIN_VAL) + self.MIN_VAL
-
+            else:
+                raise ValueError("Unsupported activation function type.")
+            
     def forward(self, inp):
         current_input = inp[:]
-
         for layer_idx in range(len(self.list_weights)):
             next_input = []
-
             for neuron_weights in self.list_weights[layer_idx]:
                 activation_input = 0
-
                 for j in range(len(current_input)):
                     activation_input += current_input[j] * neuron_weights[j]
-
                 activation_input += neuron_weights[-1]  
                 next_input.append(self.activation(activation_input))
-
             if layer_idx < len(self.list_laws):
                 self.list_laws[layer_idx] = next_input
-
             current_input = next_input
 
         return current_input
 
     def backpropagation(self, inp, target):
-
         output = self.forward(inp)
+
         errors = [output[i] - target[i] for i in range(len(output))]
+
         deltas = [None for _ in range(len(self.list_weights))]
         last_hidden = self.list_laws[-1] if self.list_laws else inp
         deltas[-1] = []
@@ -102,22 +104,19 @@ class NeuralNetwork:
             d = errors[i] * self.activation(output[i], IsDerivative=True)
             deltas[-1].append(d)
 
-        # === ДЕЛЬТЫ СКРЫТЫХ СЛОЁВ (в обратном порядке) ===
         for layer_idx in range(len(self.list_laws) - 1, -1, -1):
             current_activations = self.list_laws[layer_idx]
             next_deltas = deltas[layer_idx + 1]
             next_weights = self.list_weights[layer_idx + 1]
-
             deltas[layer_idx] = []
             for i in range(len(current_activations)):
                 err = 0
                 for j in range(len(next_deltas)):
-                    # Без bias веса
+                    # без bias веса
                     err += next_deltas[j] * next_weights[j][i]
                 delta = err * self.activation(current_activations[i], IsDerivative=True)
                 deltas[layer_idx].append(delta)
 
-        # === ОБНОВЛЕНИЕ ВЕСОВ ===
         for layer_idx in range(len(self.list_weights)):
             inputs = inp if layer_idx == 0 else self.list_laws[layer_idx - 1]
 
@@ -138,9 +137,14 @@ class NeuralNetwork:
         return list(X_shuffled), list(y_shuffled)
 
     def fit(self, X, y):
+        if len(X) != len(y):
+            raise ValueError("Input and target data must have the same number of samples.")
+        if len(X[0]) != self.laws[0]:
+            raise ValueError("Input data dimension does not match the input layer size.")
+        
         for epoch in range(self.val_epochs):  
             X_shuffled, y_shuffled = self.shuffle_data(X, y)
-            for i in range(len(X)):
+            for i in range(len(X_shuffled)):
                 inp = self.normalise(X_shuffled[i])  
                 target = self.normalise(y_shuffled[i])
                 self.backpropagation(inp, target)
@@ -164,6 +168,8 @@ class NeuralNetwork:
                 respond_list.append((pred - real) ** 2)
             elif Type == "MAE":
                 respond_list.append(abs(pred - real))
+            else:
+                raise ValueError("Unsupported score type. Use 'MSE' or 'MAE'.")
         return sum(respond_list) / len(respond_list)
     
 
@@ -171,8 +177,11 @@ class NeuralNetwork:
 class NeuralNetworkText:
     def __init__(self):
         self.letters = self.get_common_symbols()
-        self.MAX_len_of_text = 5
-
+        self.MAX_len_of_text = 50
+        self.nn = NeuralNetwork([self.MAX_len_of_text, 5, 5, self.MAX_len_of_text])
+        self.nn.MIN_VAL = 0
+        self.nn.MAX_VAL = len(self.letters) - 1
+        
     def get_common_symbols(self):
         russian_upper = ''.join([chr(c) for c in range(ord('А'), ord('Я') + 1)]) + 'Ё'
         russian_lower = ''.join([chr(c) for c in range(ord('а'), ord('я') + 1)]) + 'ё'
@@ -197,11 +206,18 @@ class NeuralNetworkText:
     def vector_to_str(self, inp):
         response = []
         for i in range(len(inp)):
-            response.append(self.letters[round(inp[i])])
+            rinp = round(inp[i])
+            rinp = max(0, min(rinp, len(self.letters) - 1))
+            rinp = min(rinp, len(self.letters) - 1)
+            response.append(self.letters[rinp])
         return response
 
-
-#ent = list(map(float, input().split()))
-'''ent = input()
-nnt = NeuralNetworkText()
-print(*nnt.vector_to_str(nnt.str_to_vector(ent)))'''
+    def predict(self, input):
+        if len(input) > self.MAX_len_of_text:
+            raise ValueError(f"Input text length exceeds maximum of {self.MAX_len_of_text} characters.")
+        else:
+            vector = self.fill_to_length(self.str_to_vector(input))
+            if len(vector) != self.nn.laws[0]:
+                raise ValueError("Input vector length does not match the neural network input layer size.")
+            pred = self.nn.predict([vector])[0]
+            return pred
